@@ -1,7 +1,7 @@
 CFLAGS = -g -fopenmp
 
-all: linda parser
 FILE = linda parser
+all: $(FILE)
 
 %: %.c
 	g++ $(CFLAGS) -o $@ $<
