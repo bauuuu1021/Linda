@@ -25,15 +25,17 @@ typedef struct element {
 } element_t;
 
 int main () {
-        char buf[MAX_LEN];
         char *p;
 	list<list<element_t>> tuple_list;
 
-        for (int for_i = 0; for_i < 3; for_i++) {
+        while (true) {
                 int client;
-                char act[5];
+                char act[5], buf[MAX_LEN];
                 list<element_t> tuple;
+
                 fgets(buf, sizeof(buf), stdin);
+                if (!strncmp(buf, "exit", 4))    break;
+
                 p = strtok(buf, " ");
                 client = atoi(p);       // parse client ID
                 p = strtok(NULL, " ");
@@ -47,7 +49,7 @@ int main () {
                                 ele.type = STR;
                                 strcpy(ele.content_str, p);
                         }
-                        else if (p[0]=='?') {    /* variable */
+                        else if (p[0]=='?') {    /* undefined variable */
                                 printf("variable\n");
                                 ele.type = VAR;
                                 // insert to variable list
@@ -64,6 +66,7 @@ int main () {
                 tuple_list.push_back(tuple);
         }
 
+        // print tuple list
         for (auto out_it = tuple_list.begin(); out_it != tuple_list.end(); out_it++) {
                 for (auto it = out_it->begin(); it != out_it->end(); it++) {
                         cout << "type " << it->type << ", content " << it->content_int << endl;
