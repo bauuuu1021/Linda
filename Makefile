@@ -3,7 +3,7 @@ CFLAGS = -g -fopenmp
 FILE = linda parser
 all: $(FILE)
 
-%: %.c
+%: %.cpp
 	g++ $(CFLAGS) -o $@ $<
 
 .PHONY: clean
