@@ -278,9 +278,6 @@ void master () {
 							break;
 						}
 					}
-					else if (it->type == VAR) {
-						printf("QQQQQQQQQQQQQQ\n");
-					}
 					else if (tuple_it->type == VAR) {
 						printf("VAR\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
@@ -329,7 +326,7 @@ void master () {
 							send2client += " ";
                         }
 
-						it->type = VAR;
+						tuple_it->type = VAR;
                         tuple_it++;
 						output_var();
                     }
