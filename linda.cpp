@@ -36,19 +36,47 @@ bool nextRnd = true;
 string send2client;
 map<string, element_t> variable_pair;
 
+void output_var() {
+	cout << "\033[1;32m---------------------\033[0m\n";
+	for (auto it = variable_pair.begin(); it!=variable_pair.end(); it++) {
+		cout << it->first << " is ";
+		if ((it->second).type == INT) {
+			cout << "INT:" << (it->second).content_int << endl;
+		}
+		else if ((it->second).type == STR) {
+			cout << "STR:" << (it->second).content_str << endl;
+		}
+		else if ((it->second).type == VAR) {
+			cout << "VAR:" << (it->second).var_name << endl;
+		}
+		else if ((it->second).type == UN_VAR) {
+			cout << "UN_VAR:" << (it->second).var_name << endl;
+		}
+	}
+	cout << "\033[1;32m---------------------\033[0m\n\n";
+}
+
 void output_tuple(list<list<element_t>> list) {
 	FILE *fp = fopen("server.txt", "a");
+	bool first_tuple = true;
 
 	fprintf(fp, "(");
 	for (auto out_it = list.begin(); out_it != list.end(); out_it++) {
-		fprintf(fp, "(");
+		if (first_tuple)
+			fprintf(fp, "(");
+		else
+			fprintf(fp, ",(");
+		first_tuple = false;
+
 		for (auto it = out_it->begin(); it != out_it->end(); it++) {
 			if (it->type == INT)
 				fprintf(fp, " %d ", it->content_int);
 			else if (it->type == VAR)
 				fprintf(fp, " %s ", it->var_name);
-			else 
+			else if (it->type == STR)
 				fprintf(fp, " %s ", it->content_str);
+			else if (it->type == UN_VAR)
+				fprintf(fp, " %s ", it->var_name);
 		}
 		fprintf(fp, ") ");
 	}
@@ -97,12 +125,14 @@ void master () {
 				ele.type = UN_VAR;
 				strcpy(ele.var_name, &p[1]);
 				element_t tmp;
+				memset(&tmp, 0, sizeof(element_t));
 				tmp.type = UN_VAR;
 				variable_pair.insert(pair<string, element_t>(string(ele.var_name), tmp));
+				output_var();
 			}
 			else if (!isdigit(p[0])) {      /* defined variable */
 				ele = (variable_pair.find(p))->second;
-				cout << "is this " << ele.content_int << endl;
+				output_var();
 			}
 			else {    /* int */
 				ele.type = INT;
@@ -209,6 +239,7 @@ void master () {
 				suspend_id.at(ret2client_id) = 0;
 				tuple_list.erase(ret);
 			}
+			output_var();
 		}
 		else {  // read or in
 			bool match = false;
@@ -289,12 +320,14 @@ void master () {
                             send2client += to_string((var_it->second).content_int);
 							send2client += " ";
                         }
-                        else {
+                        else if ((var_it->second).type==STR) {
                             send2client += string((var_it->second).content_str);
 							send2client += " ";
                         }
 
+						it->type = VAR;
                         tuple_it++;
+						output_var();
                     }
 				}
 			}
@@ -310,6 +343,7 @@ void master () {
 				}
 				client_vec.at(client) = 1;
 			}
+			output_var();
 		}
 
 		// print tuple list
@@ -317,11 +351,13 @@ void master () {
 		for (auto out_it = tuple_list.begin(); out_it != tuple_list.end(); out_it++) {
 			for (auto it = out_it->begin(); it != out_it->end(); it++) {
 				if (it->type == INT)
-					cout << " " << it->content_int;
+					cout << " I:" << it->content_int;
 				else if (it->type == VAR)
-					cout << " " << it->var_name;
-				else 
-					cout << " " << it->content_str;
+					cout << " V:" << it->var_name;
+				else if (it->type == STR)
+					cout << " S:" << it->content_str;
+				else if (it->type == UN_VAR)
+					cout << " U:" << it->var_name;
 			}
 			cout << "\n";
 		}
@@ -332,11 +368,13 @@ void master () {
 			cout << "ask by client " << (out_it->begin())->client_id << " : ";
 			for (auto it = out_it->begin(); it != out_it->end(); it++) {
 				if (it->type == INT)
-					cout << " " << it->content_int;
+					cout << " I:" << it->content_int;
 				else if (it->type == VAR)
-					cout << " " << it->var_name;
-				else 
-					cout << " " << it->content_str;
+					cout << " V:" << it->var_name;
+				else if (it->type == STR)
+					cout << " S:" << it->content_str;
+				else if (it->type == UN_VAR)
+					cout << " U:" << it->var_name;
 			}
 			cout << "\n";
 		}
