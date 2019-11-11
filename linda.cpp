@@ -6,6 +6,7 @@
 #include <map>
 extern "C" {
 #include <string.h>
+#include <unistd.h>
 #include <stdio.h>
 }
 
@@ -39,6 +40,7 @@ void master () {
 	list<list<element_t>> tuple_list, wait_list;
 
 	while (true) {
+        sleep(1);
 		int client;
 		char act[5], buf[MAX_LEN];
 		list<element_t> tuple;
@@ -139,8 +141,10 @@ void master () {
 		}
 		else {  // read or in
 			bool match = false;
+            list<list<element_t>>::iterator ret;    // record the instance that may need to pop out
 			for (auto out_it = tuple_list.begin(); (match == false)&&(out_it != tuple_list.end()); out_it++) {
 				auto tuple_it = tuple.begin();
+                ret = out_it;
 				for (auto it = out_it->begin(); it != out_it->end(); it++) {
 					match = true;
 
@@ -181,8 +185,11 @@ void master () {
 			cout << "send2client:" << send2client <<  "match " << match << endl;
 			if (match == false)      // no previous request match
 				wait_list.push_back(tuple);
-			else
+			else {  // match 
+                if (!strcmp(act, "in"))
+                    tuple_list.erase(ret);
 				client_vec.at(client) = 1;
+            }
 		}
 
 		// print tuple list
@@ -226,7 +233,7 @@ void client (int thread_id) {
 		file_name += ".txt";
 		FILE *fp = fopen(file_name.c_str(), "a");
 		printf("Thread %d - acquired simple_lock\n", thread_id);
-		fprintf(fp, "%s\n", send2client.c_str());
+		fprintf(fp, "(%s)\n", send2client.c_str());
 		fclose(fp);
 		client_vec[thread_id] = 0; 
 	}
