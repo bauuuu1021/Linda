@@ -206,7 +206,7 @@ void master () {
 					}
 					else if (it->type == UN_VAR) {
 						printf("\033[1;34mmiss undefined\033[0m\n");
-						auto var_it = variable_pair.find(tuple_it->var_name);
+						auto var_it = variable_pair.find(it->var_name);
 						(var_it->second) = *tuple_it;
 						it->type = VAR;
 
@@ -218,7 +218,6 @@ void master () {
 							send2client += string((var_it->second).content_str);
 							send2client += " ";
 						}
-
 						tuple_it++;
 					}
 					else
@@ -232,13 +231,13 @@ void master () {
 			cout << "send2client:" << send2client <<  " ,match " << match << " ,client " << ret2client_id << endl;
 			if (match == false) {     // no previous request match
 				tuple_list.push_back(tuple);
-				output_tuple(tuple_list);
 			}
 			else {	// match -> rescue from suspend
 				client_vec.at(ret2client_id) = 1;
 				suspend_id.at(ret2client_id) = 0;
 				tuple_list.erase(ret);
 			}
+			output_tuple(tuple_list);
 			output_var();
 		}
 		else {  // read or in
@@ -279,10 +278,15 @@ void master () {
 							break;
 						}
 					}
+					else if (it->type == VAR) {
+						printf("QQQQQQQQQQQQQQ\n");
+					}
 					else if (tuple_it->type == VAR) {
 						printf("VAR\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
+						cout << "\033[1;31m" << (var_it->second).type << "," << it->type <<"033[0m\n";
 						if ((var_it->second).type == it->type) { 
+							printf("hereeeeee?\n");
 							if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
 								if (it->content_int == (var_it->second).content_int) {
 									send2client += to_string((var_it->second).content_int);
