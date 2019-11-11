@@ -34,13 +34,34 @@ vector<int> client_vec;
 bool nextRnd = true;
 string send2client;
 
+void output_tuple(list<list<element_t>> list) {
+	FILE *fp = fopen("server.txt", "a");
+
+    fprintf(fp, "(");
+	for (auto out_it = list.begin(); out_it != list.end(); out_it++) {
+        fprintf(fp, "(");
+		for (auto it = out_it->begin(); it != out_it->end(); it++) {
+			if (it->type == INT)
+				fprintf(fp, " %d ", it->content_int);
+			else if (it->type == VAR)
+				fprintf(fp, " %s ", it->var_name);
+			else 
+				fprintf(fp, " %s ", it->content_str);
+		}
+		fprintf(fp, ") ");
+	}
+    fprintf(fp, ")\n");
+
+    fclose(fp);
+}
+
 void master () {
 	//while (!omp_test_lock(&simple_lock));
 	char *p;
 	list<list<element_t>> tuple_list, wait_list;
 
 	while (true) {
-        sleep(1);
+		sleep(1);
 		int client;
 		char act[5], buf[MAX_LEN];
 		list<element_t> tuple;
@@ -134,17 +155,19 @@ void master () {
 				}
 			}
 			cout << "send2client:" << send2client <<  "match " << match << "client " << ret2client_id << endl;
-			if (match == false)      // no previous request match
+			if (match == false) {     // no previous request match
 				tuple_list.push_back(tuple);
-			else
+				output_tuple(tuple_list);
+			}
+			else 
 				client_vec.at(ret2client_id) = 1;
 		}
 		else {  // read or in
 			bool match = false;
-            list<list<element_t>>::iterator ret;    // record the instance that may need to pop out
+			list<list<element_t>>::iterator ret;    // record the instance that may need to pop out
 			for (auto out_it = tuple_list.begin(); (match == false)&&(out_it != tuple_list.end()); out_it++) {
 				auto tuple_it = tuple.begin();
-                ret = out_it;
+				ret = out_it;
 				for (auto it = out_it->begin(); it != out_it->end(); it++) {
 					match = true;
 
@@ -186,10 +209,12 @@ void master () {
 			if (match == false)      // no previous request match
 				wait_list.push_back(tuple);
 			else {  // match 
-                if (!strcmp(act, "in"))
-                    tuple_list.erase(ret);
+				if (!strcmp(act, "in")) {
+					tuple_list.erase(ret);
+					output_tuple(tuple_list);
+				}
 				client_vec.at(client) = 1;
-            }
+			}
 		}
 
 		// print tuple list
