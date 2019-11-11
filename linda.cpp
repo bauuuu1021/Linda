@@ -16,7 +16,8 @@ using namespace std;
 enum TYPE {
 	STR,
 	INT,
-	VAR
+	VAR,
+	UN_VAR  // variable that hasn't defined yet
 };
 
 typedef struct element {
@@ -30,16 +31,17 @@ typedef struct element {
 } element_t;
 
 omp_lock_t simple_lock;
-vector<int> client_vec;
+vector<int> client_vec, suspend_id;
 bool nextRnd = true;
 string send2client;
+map<string, element_t> variable_pair;
 
 void output_tuple(list<list<element_t>> list) {
 	FILE *fp = fopen("server.txt", "a");
 
-    fprintf(fp, "(");
+	fprintf(fp, "(");
 	for (auto out_it = list.begin(); out_it != list.end(); out_it++) {
-        fprintf(fp, "(");
+		fprintf(fp, "(");
 		for (auto it = out_it->begin(); it != out_it->end(); it++) {
 			if (it->type == INT)
 				fprintf(fp, " %d ", it->content_int);
@@ -50,9 +52,9 @@ void output_tuple(list<list<element_t>> list) {
 		}
 		fprintf(fp, ") ");
 	}
-    fprintf(fp, ")\n");
+	fprintf(fp, ")\n");
 
-    fclose(fp);
+	fclose(fp);
 }
 
 void master () {
@@ -67,6 +69,7 @@ void master () {
 		list<element_t> tuple;
 
 		fgets(buf, sizeof(buf), stdin);
+		cout << "\033[1;35m" << buf << "\033[0m";
 		strtok(buf, "\n");
 		if (!strncmp(buf, "exit", 4)) {
 			nextRnd = false;
@@ -77,30 +80,31 @@ void master () {
 
 		p = strtok(buf, " ");
 		client = atoi(p);       // parse client ID
+		if (suspend_id.at(client))
+			continue;
 		p = strtok(NULL, " ");
 		strcpy(act, p);         // parse action
 		p = strtok(NULL, " ");
 		do {
 			element_t ele;
 			ele.client_id = client;
-			printf("input with id %d\n", ele.client_id);
 
 			if (p[0]=='"') {                /* string */
-				printf("string\n");
 				ele.type = STR;
 				strcpy(ele.content_str, p);
 			}
 			else if (p[0]=='?') {    /* undefined variable */
-				printf("undefined variable\n");
-				ele.type = VAR;
+				ele.type = UN_VAR;
 				strcpy(ele.var_name, &p[1]);
-				// insert to variable list
+				element_t tmp;
+				tmp.type = UN_VAR;
+				variable_pair.insert(pair<string, element_t>(string(ele.var_name), tmp));
 			}
 			else if (!isdigit(p[0])) {      /* defined variable */
-				printf("defined variable %s\n", p);
+				ele = (variable_pair.find(p))->second;
+				cout << "is this " << ele.content_int << endl;
 			}
 			else {    /* int */
-				printf("integer\n");
 				ele.type = INT;
 				ele.content_int = atoi(p);
 			}
@@ -114,8 +118,10 @@ void master () {
 		if (!strcmp(act, "out")) {      // out
 			bool match = false;
 			int ret2client_id;
+			list<list<element_t>>::iterator ret;    // record the instance that may need to pop out
 			for (auto out_it = wait_list.begin(); (match == false)&&(out_it != wait_list.end()); out_it++) {
 				auto tuple_it = tuple.begin();
+				ret = out_it;
 				for (auto it = out_it->begin(); it != out_it->end(); it++) {
 					match = true;
 					ret2client_id = it->client_id;
@@ -149,18 +155,60 @@ void master () {
 							break;
 						}
 					}
-					else {
-						// TODO variable
+					else if (it->type == VAR) {
+						printf("\033[1;34mdefined\033[0m\n");
+						auto var_it = variable_pair.find(tuple_it->var_name);
+
+                        if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
+                            send2client += to_string((var_it->second).content_int);
+							send2client += " ";
+                            tuple_it++;
+                        }
+                        else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
+                            send2client += string((var_it->second).content_str);
+							send2client += " ";
+                            tuple_it++;
+                        }
+                        else {
+                            match = false;
+                            break;
+                        }                        
 					}
+					else if (it->type == UN_VAR) {
+						printf("\033[1;34mmiss undefined\033[0m\n");
+						auto var_it = variable_pair.find(tuple_it->var_name);
+						(var_it->second) = *tuple_it;
+						it->type = VAR;
+
+						if ((var_it->second).type == INT) {
+							send2client += to_string((var_it->second).content_int);
+							send2client += " ";
+						}
+						else {
+							send2client += string((var_it->second).content_str);
+							send2client += " ";
+						}
+
+						tuple_it++;
+					}
+					else
+					{
+						printf("\033[1;34m?????\033[0m\n");
+						cout << tuple_it->type << endl;
+					}
+					
 				}
 			}
-			cout << "send2client:" << send2client <<  "match " << match << "client " << ret2client_id << endl;
+			cout << "send2client:" << send2client <<  " ,match " << match << " ,client " << ret2client_id << endl;
 			if (match == false) {     // no previous request match
 				tuple_list.push_back(tuple);
 				output_tuple(tuple_list);
 			}
-			else 
+			else {	// match -> rescue from suspend
 				client_vec.at(ret2client_id) = 1;
+				suspend_id.at(ret2client_id) = 0;
+				tuple_list.erase(ret);
+			}
 		}
 		else {  // read or in
 			bool match = false;
@@ -200,14 +248,61 @@ void master () {
 							break;
 						}
 					}
-					else {
-						// TODO variable
+					else if (tuple_it->type == VAR) {
+						printf("VAR\n");
+						auto var_it = variable_pair.find(tuple_it->var_name);
+						if ((var_it->second).type == it->type) { 
+							if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
+								if (it->content_int == (var_it->second).content_int) {
+									send2client += to_string((var_it->second).content_int);
+									send2client += " ";
+									tuple_it++;
+								}
+								else {
+									match = false;
+									break;
+								}
+							}
+							else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
+								if (!strcmp(it->content_str, (var_it->second).content_str)) {
+									send2client += string((var_it->second).content_str);
+									send2client += " ";
+									tuple_it++;
+								}
+								else {
+									match = false;
+									break;
+								}
+							}
+						}
+						else {  
+							match = false;
+							break;
+						}
 					}
+                    else if (tuple_it->type == UN_VAR) {
+						printf("UN_VAR\n");
+                        auto var_it = variable_pair.find(tuple_it->var_name);
+                        var_it->second = *it;
+
+                        if ((var_it->second).type==INT) {
+                            send2client += to_string((var_it->second).content_int);
+							send2client += " ";
+                        }
+                        else {
+                            send2client += string((var_it->second).content_str);
+							send2client += " ";
+                        }
+
+                        tuple_it++;
+                    }
 				}
 			}
-			cout << "send2client:" << send2client <<  "match " << match << endl;
-			if (match == false)      // no previous request match
+			cout << "send2client:" << send2client <<  " ,match " << match << endl;
+			if (match == false) {     // no previous request match -> suspend
 				wait_list.push_back(tuple);
+				suspend_id.at(client) = 1;
+			}
 			else {  // match 
 				if (!strcmp(act, "in")) {
 					tuple_list.erase(ret);
@@ -234,7 +329,7 @@ void master () {
 		// print waiting list
 		cout << "****************************\n";
 		for (auto out_it = wait_list.begin(); out_it != wait_list.end(); out_it++) {
-			cout << "ask by client " << (out_it->begin())->client_id << endl;
+			cout << "ask by client " << (out_it->begin())->client_id << " : ";
 			for (auto it = out_it->begin(); it != out_it->end(); it++) {
 				if (it->type == INT)
 					cout << " " << it->content_int;
@@ -245,7 +340,7 @@ void master () {
 			}
 			cout << "\n";
 		}
-		cout << "****************************\n";
+		cout << "****************************\n\n\n";
 	}
 	//omp_unset_lock(&simple_lock);
 
@@ -269,6 +364,7 @@ int main () {
 	cin >> numThread;
 	getchar();
 	client_vec.resize(numThread + 1, 0);
+	suspend_id.resize(numThread + 1, 0);
 
 	omp_init_lock(&simple_lock);
 
