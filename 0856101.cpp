@@ -36,26 +36,6 @@ bool nextRnd = true;
 string send2client;
 map<string, element_t> variable_pair;
 
-void output_var() {
-	cout << "\033[1;32m---------------------\033[0m\n";
-	for (auto it = variable_pair.begin(); it!=variable_pair.end(); it++) {
-		cout << it->first << " is ";
-		if ((it->second).type == INT) {
-			cout << "INT:" << (it->second).content_int << endl;
-		}
-		else if ((it->second).type == STR) {
-			cout << "STR:" << (it->second).content_str << endl;
-		}
-		else if ((it->second).type == VAR) {
-			cout << "VAR:" << (it->second).var_name << endl;
-		}
-		else if ((it->second).type == UN_VAR) {
-			cout << "UN_VAR:" << (it->second).var_name << endl;
-		}
-	}
-	cout << "\033[1;32m---------------------\033[0m\n\n";
-}
-
 void output_tuple(list<list<element_t>> list) {
 	FILE *fp = fopen("server.txt", "a");
 	bool first_tuple = true;
@@ -91,7 +71,6 @@ void output_tuple(list<list<element_t>> list) {
 }
 
 void master () {
-	//while (!omp_test_lock(&simple_lock));
 	char *p;
 	list<list<element_t>> tuple_list, wait_list;
 
@@ -103,7 +82,6 @@ void master () {
 		list<element_t> tuple;
 
 		fgets(buf, sizeof(buf), stdin);
-		cout << "\033[1;35m" << buf << "\033[0m";
 		strtok(buf, "\n");
 		if (!strncmp(buf, "exit", 4)) {
 			nextRnd = false;
@@ -133,11 +111,9 @@ void master () {
 				memset(&tmp, 0, sizeof(element_t));
 				tmp.type = UN_VAR;
 				variable_pair.insert(pair<string, element_t>(string(ele.var_name), tmp));
-				output_var();
 			}
 			else if (!isdigit(p[0])) {      /* defined variable */
 				ele = (variable_pair.find(p))->second;
-				output_var();
 			}
 			else {    /* int */
 				ele.type = INT;
@@ -194,7 +170,6 @@ void master () {
 						}
 					}
 					else if (it->type == VAR) {
-						printf("\033[1;34mdefined\033[0m\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
 
 						if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
@@ -214,7 +189,6 @@ void master () {
 						}                        
 					}
 					else if (it->type == UN_VAR) {
-						printf("\033[1;34mmiss undefined\033[0m\n");
 						auto var_it = variable_pair.find(it->var_name);
 						(var_it->second) = *tuple_it;
 						it->type = VAR;
@@ -229,15 +203,8 @@ void master () {
 						}
 						tuple_it++;
 					}
-					else
-					{
-						printf("\033[1;34m?????\033[0m\n");
-						cout << tuple_it->type << endl;
-					}
-
 				}
 			}
-			cout << "send2client:" << send2client <<  " ,match " << match << " ,client " << ret2client_id << endl;
 			if (match == false) {     // no previous request match
 				tuple_list.push_back(tuple);
 			}
@@ -248,7 +215,6 @@ void master () {
 				client_vec.at(0) = 0;
 			}
 			output_tuple(tuple_list);
-			output_var();
 		}
 		else {  // read or in
 			bool match = false;
@@ -292,11 +258,8 @@ void master () {
 						}
 					}
 					else if (tuple_it->type == VAR) {
-						printf("VAR\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
-						cout << "\033[1;31m" << (var_it->second).type << "," << it->type <<"033[0m\n";
 						if ((var_it->second).type == it->type) { 
-							printf("hereeeeee?\n");
 							if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
 								if (it->content_int == (var_it->second).content_int) {
 									send2client += to_string((var_it->second).content_int);
@@ -329,7 +292,6 @@ void master () {
 						}
 					}
 					else if (tuple_it->type == UN_VAR) {
-						printf("UN_VAR\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
 						var_it->second = *it;
 
@@ -344,11 +306,10 @@ void master () {
 
 						tuple_it->type = VAR;
 						tuple_it++;
-						output_var();
 					}
 				}
 			}
-			cout << "send2client:" << send2client <<  " ,match " << match << endl;
+
 			if (match == false) {     // no previous request match -> suspend
 				wait_list.push_back(tuple);
 				suspend_id.at(client) = 1;
@@ -360,48 +321,11 @@ void master () {
 				}
 				client_vec.at(client) = 1;
 				client_vec.at(0) = 0;
-				//omp_unset_lock(&simple_lock);
 			}
-			output_var();
 		}
 
-		// print tuple list
-		cout << "----------------------------\n";
-		for (auto out_it = tuple_list.begin(); out_it != tuple_list.end(); out_it++) {
-			for (auto it = out_it->begin(); it != out_it->end(); it++) {
-				if (it->type == INT)
-					cout << " I:" << it->content_int;
-				else if (it->type == VAR)
-					cout << " V:" << it->var_name;
-				else if (it->type == STR)
-					cout << " S:" << it->content_str;
-				else if (it->type == UN_VAR)
-					cout << " U:" << it->var_name;
-			}
-			cout << "\n";
-		}
-		cout << "----------------------------\n";
-		// print waiting list
-		cout << "****************************\n";
-		for (auto out_it = wait_list.begin(); out_it != wait_list.end(); out_it++) {
-			cout << "ask by client " << (out_it->begin())->client_id << " : ";
-			for (auto it = out_it->begin(); it != out_it->end(); it++) {
-				if (it->type == INT)
-					cout << " I:" << it->content_int;
-				else if (it->type == VAR)
-					cout << " V:" << it->var_name;
-				else if (it->type == STR)
-					cout << " S:" << it->content_str;
-				else if (it->type == UN_VAR)
-					cout << " U:" << it->var_name;
-			}
-			cout << "\n";
-		}
-		cout << "****************************\n\n\n";
 		omp_unset_lock(&simple_lock);
 	}
-	//omp_unset_lock(&simple_lock);
-
 }
 
 void client (int thread_id) {
@@ -413,11 +337,11 @@ void client (int thread_id) {
 		if (client_vec[thread_id]) {
 			omp_set_lock(&simple_lock);
 
-			printf("Thread %d - acquired simple_lock\n", thread_id);
 			send2client = send2client.substr(0, send2client.size()-1); 
 			fprintf(fp, "(%s)\n", send2client.c_str());
 			client_vec.at(thread_id) = 0; 
 			client_vec.at(0) = 1;
+			
 			omp_unset_lock(&simple_lock);
 		}
 	}
