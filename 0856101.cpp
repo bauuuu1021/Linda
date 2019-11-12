@@ -96,7 +96,8 @@ void master () {
 	list<list<element_t>> tuple_list, wait_list;
 
 	while (true) {
-		sleep(1);
+		while (!client_vec[0]);
+		omp_set_lock(&simple_lock);
 		int client;
 		char act[5], buf[MAX_LEN];
 		list<element_t> tuple;
@@ -108,6 +109,7 @@ void master () {
 			nextRnd = false;
 			send2client.clear();
 			fill(client_vec.begin(), client_vec.end(), 1);
+			omp_unset_lock(&simple_lock);
 			break;
 		}    
 
@@ -358,6 +360,8 @@ void master () {
 					output_tuple(tuple_list);
 				}
 				client_vec.at(client) = 1;
+				client_vec.at(0) = 0;
+				//omp_unset_lock(&simple_lock);
 			}
 			output_var();
 		}
@@ -395,6 +399,7 @@ void master () {
 			cout << "\n";
 		}
 		cout << "****************************\n\n\n";
+		omp_unset_lock(&simple_lock);
 	}
 	//omp_unset_lock(&simple_lock);
 
@@ -403,6 +408,8 @@ void master () {
 void client (int thread_id) {
 	while (nextRnd) {
 		while (!client_vec[thread_id]);
+		if (nextRnd || client_vec.at(thread_id))
+			omp_set_lock(&simple_lock);
 		string file_name = to_string(thread_id);
 		file_name += ".txt";
 		FILE *fp = fopen(file_name.c_str(), "a");
@@ -410,7 +417,10 @@ void client (int thread_id) {
 		send2client = send2client.substr(0, send2client.size()-1); 
 		fprintf(fp, "(%s)\n", send2client.c_str());
 		fclose(fp);
-		client_vec[thread_id] = 0; 
+
+		client_vec.at(thread_id) = 0; 
+		client_vec.at(0) = 1;
+		omp_unset_lock(&simple_lock);
 	}
 }
 
@@ -429,6 +439,7 @@ int main () {
 
 		// master
 		if (tid == 0) {
+			client_vec.at(0) = 1;
 			master();
 		} 
 		// client
