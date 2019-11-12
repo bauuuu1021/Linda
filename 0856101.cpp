@@ -189,20 +189,20 @@ void master () {
 						printf("\033[1;34mdefined\033[0m\n");
 						auto var_it = variable_pair.find(tuple_it->var_name);
 
-                        if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
-                            send2client += to_string((var_it->second).content_int);
+						if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
+							send2client += to_string((var_it->second).content_int);
 							send2client += " ";
-                            tuple_it++;
-                        }
-                        else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
-                            send2client += string((var_it->second).content_str);
+							tuple_it++;
+						}
+						else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
+							send2client += string((var_it->second).content_str);
 							send2client += " ";
-                            tuple_it++;
-                        }
-                        else {
-                            match = false;
-                            break;
-                        }                        
+							tuple_it++;
+						}
+						else {
+							match = false;
+							break;
+						}                        
 					}
 					else if (it->type == UN_VAR) {
 						printf("\033[1;34mmiss undefined\033[0m\n");
@@ -225,7 +225,7 @@ void master () {
 						printf("\033[1;34m?????\033[0m\n");
 						cout << tuple_it->type << endl;
 					}
-					
+
 				}
 			}
 			cout << "send2client:" << send2client <<  " ,match " << match << " ,client " << ret2client_id << endl;
@@ -312,24 +312,24 @@ void master () {
 							break;
 						}
 					}
-                    else if (tuple_it->type == UN_VAR) {
+					else if (tuple_it->type == UN_VAR) {
 						printf("UN_VAR\n");
-                        auto var_it = variable_pair.find(tuple_it->var_name);
-                        var_it->second = *it;
+						auto var_it = variable_pair.find(tuple_it->var_name);
+						var_it->second = *it;
 
-                        if ((var_it->second).type==INT) {
-                            send2client += to_string((var_it->second).content_int);
+						if ((var_it->second).type==INT) {
+							send2client += to_string((var_it->second).content_int);
 							send2client += " ";
-                        }
-                        else if ((var_it->second).type==STR) {
-                            send2client += string((var_it->second).content_str);
+						}
+						else if ((var_it->second).type==STR) {
+							send2client += string((var_it->second).content_str);
 							send2client += " ";
-                        }
+						}
 
 						tuple_it->type = VAR;
-                        tuple_it++;
+						tuple_it++;
 						output_var();
-                    }
+					}
 				}
 			}
 			cout << "send2client:" << send2client <<  " ,match " << match << endl;
@@ -423,34 +423,3 @@ int main () {
 
 	omp_destroy_lock(&simple_lock);
 }
-
-#if 0
-omp_init_lock(&simple_lock);
-
-#pragma omp parallel num_threads(numThread+1)
-{
-	int tid = omp_get_thread_num();
-
-	// master
-	if (tid == 0) {
-		while (1) {
-			while (!omp_test_lock(&simple_lock));
-			printf("master\n");
-			sleep(2);
-			omp_unset_lock(&simple_lock);
-		}
-	} 
-	// client
-	else {
-		while (!omp_test_lock(&simple_lock))
-			;//printf("Thread %d - failed to acquire simple_lock\n", tid);
-
-		printf("Thread %d - acquired simple_lock\n", tid);
-		sleep(1);
-		printf("Thread %d - released simple_lock\n", tid);
-		omp_unset_lock(&simple_lock);
-	}
-}
-
-omp_destroy_lock(&simple_lock);
-#endif

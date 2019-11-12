@@ -1,6 +1,6 @@
 CFLAGS = -g -fopenmp
 
-FILE = linda parser
+FILE = 0856101
 all: $(FILE)
 
 %: %.cpp
