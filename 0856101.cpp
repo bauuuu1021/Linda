@@ -107,8 +107,6 @@ void master () {
 		strtok(buf, "\n");
 		if (!strncmp(buf, "exit", 4)) {
 			nextRnd = false;
-			send2client.clear();
-			fill(client_vec.begin(), client_vec.end(), 1);
 			omp_unset_lock(&simple_lock);
 			break;
 		}    
@@ -247,6 +245,7 @@ void master () {
 				client_vec.at(ret2client_id) = 1;
 				suspend_id.at(ret2client_id) = 0;
 				tuple_list.erase(ret);
+				client_vec.at(0) = 0;
 			}
 			output_tuple(tuple_list);
 			output_var();
@@ -406,22 +405,24 @@ void master () {
 }
 
 void client (int thread_id) {
-	while (nextRnd) {
-		while (!client_vec[thread_id]);
-		if (nextRnd || client_vec.at(thread_id))
-			omp_set_lock(&simple_lock);
-		string file_name = to_string(thread_id);
-		file_name += ".txt";
-		FILE *fp = fopen(file_name.c_str(), "a");
-		printf("Thread %d - acquired simple_lock\n", thread_id);
-		send2client = send2client.substr(0, send2client.size()-1); 
-		fprintf(fp, "(%s)\n", send2client.c_str());
-		fclose(fp);
+	string file_name = to_string(thread_id);
+	file_name += ".txt";
+	FILE *fp = fopen(file_name.c_str(), "a");
 
-		client_vec.at(thread_id) = 0; 
-		client_vec.at(0) = 1;
-		omp_unset_lock(&simple_lock);
+	while (nextRnd || client_vec.at(thread_id)) {
+		if (client_vec[thread_id]) {
+			omp_set_lock(&simple_lock);
+
+			printf("Thread %d - acquired simple_lock\n", thread_id);
+			send2client = send2client.substr(0, send2client.size()-1); 
+			fprintf(fp, "(%s)\n", send2client.c_str());
+			client_vec.at(thread_id) = 0; 
+			client_vec.at(0) = 1;
+			omp_unset_lock(&simple_lock);
+		}
 	}
+
+	fclose(fp);
 }
 
 int main () {
