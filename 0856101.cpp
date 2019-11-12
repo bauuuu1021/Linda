@@ -68,17 +68,22 @@ void output_tuple(list<list<element_t>> list) {
 			fprintf(fp, ",(");
 		first_tuple = false;
 
+		bool first_element = true;
 		for (auto it = out_it->begin(); it != out_it->end(); it++) {
+			if (!first_element) 
+				fprintf(fp, ",");
+			first_element = false;
+
 			if (it->type == INT)
-				fprintf(fp, " %d ", it->content_int);
+				fprintf(fp, "%d", it->content_int);
 			else if (it->type == VAR)
-				fprintf(fp, " %s ", it->var_name);
+				fprintf(fp, "%s", it->var_name);
 			else if (it->type == STR)
-				fprintf(fp, " %s ", it->content_str);
+				fprintf(fp, "%s", it->content_str);
 			else if (it->type == UN_VAR)
-				fprintf(fp, " %s ", it->var_name);
+				fprintf(fp, "%s", it->var_name);
 		}
-		fprintf(fp, ") ");
+		fprintf(fp, ")");
 	}
 	fprintf(fp, ")\n");
 
@@ -167,7 +172,7 @@ void master () {
 					if ((it->type == tuple_it->type)&&(it->type==INT)) {
 						if (it->content_int == tuple_it->content_int) {
 							send2client += to_string(tuple_it->content_int);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else {
@@ -179,7 +184,7 @@ void master () {
 					else if ((it->type == tuple_it->type)&&(it->type==STR)) {
 						if (!strcmp(it->content_str, tuple_it->content_str)) {
 							send2client += string(tuple_it->content_str);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else {
@@ -194,12 +199,12 @@ void master () {
 
 						if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
 							send2client += to_string((var_it->second).content_int);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
 							send2client += string((var_it->second).content_str);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else {
@@ -216,11 +221,11 @@ void master () {
 
 						if ((var_it->second).type == INT) {
 							send2client += to_string((var_it->second).content_int);
-							send2client += " ";
+							send2client += ",";
 						}
 						else {
 							send2client += string((var_it->second).content_str);
-							send2client += " ";
+							send2client += ",";
 						}
 						tuple_it++;
 					}
@@ -264,7 +269,7 @@ void master () {
 					if ((it->type == tuple_it->type)&&(it->type==INT)) {
 						if (it->content_int == tuple_it->content_int) {
 							send2client += to_string(tuple_it->content_int);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else {
@@ -276,7 +281,7 @@ void master () {
 					else if ((it->type == tuple_it->type)&&(it->type==STR)) {
 						if (!strcmp(it->content_str, tuple_it->content_str)) {
 							send2client += string(tuple_it->content_str);
-							send2client += " ";
+							send2client += ",";
 							tuple_it++;
 						}
 						else {
@@ -294,7 +299,7 @@ void master () {
 							if ((it->type == (var_it->second).type)&&((var_it->second).type==INT)) {
 								if (it->content_int == (var_it->second).content_int) {
 									send2client += to_string((var_it->second).content_int);
-									send2client += " ";
+									send2client += ",";
 									tuple_it++;
 								}
 								else {
@@ -306,7 +311,7 @@ void master () {
 							else if ((it->type == (var_it->second).type)&&((var_it->second).type==STR)) {
 								if (!strcmp(it->content_str, (var_it->second).content_str)) {
 									send2client += string((var_it->second).content_str);
-									send2client += " ";
+									send2client += ",";
 									tuple_it++;
 								}
 								else {
@@ -329,11 +334,11 @@ void master () {
 
 						if ((var_it->second).type==INT) {
 							send2client += to_string((var_it->second).content_int);
-							send2client += " ";
+							send2client += ",";
 						}
 						else if ((var_it->second).type==STR) {
 							send2client += string((var_it->second).content_str);
-							send2client += " ";
+							send2client += ",";
 						}
 
 						tuple_it->type = VAR;
@@ -402,6 +407,7 @@ void client (int thread_id) {
 		file_name += ".txt";
 		FILE *fp = fopen(file_name.c_str(), "a");
 		printf("Thread %d - acquired simple_lock\n", thread_id);
+		send2client = send2client.substr(0, send2client.size()-1); 
 		fprintf(fp, "(%s)\n", send2client.c_str());
 		fclose(fp);
 		client_vec[thread_id] = 0; 
