@@ -159,6 +159,7 @@ void master () {
 					// check length
 					if (tuple.size()!=out_it->size()) {
 						match = false;
+						send2client.clear();
 						break;
 					}
 
@@ -171,6 +172,7 @@ void master () {
 						}
 						else {
 							match = false;
+							send2client.clear();
 							break;
 						}
 					}
@@ -182,6 +184,7 @@ void master () {
 						}
 						else {
 							match = false;
+							send2client.clear();
 							break;
 						}
 					}
@@ -201,6 +204,7 @@ void master () {
 						}
 						else {
 							match = false;
+							send2client.clear();
 							break;
 						}                        
 					}
@@ -252,6 +256,7 @@ void master () {
 					// check length
 					if (tuple.size()!=out_it->size()) {
 						match = false;
+						send2client.clear();
 						break;
 					}
 
@@ -264,6 +269,7 @@ void master () {
 						}
 						else {
 							match = false;
+							send2client.clear();
 							break;
 						}
 					}
@@ -275,6 +281,7 @@ void master () {
 						}
 						else {
 							match = false;
+							send2client.clear();
 							break;
 						}
 					}
@@ -292,6 +299,7 @@ void master () {
 								}
 								else {
 									match = false;
+									send2client.clear();
 									break;
 								}
 							}
@@ -303,12 +311,14 @@ void master () {
 								}
 								else {
 									match = false;
+									send2client.clear();
 									break;
 								}
 							}
 						}
 						else {  
 							match = false;
+							send2client.clear();
 							break;
 						}
 					}
