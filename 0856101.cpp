@@ -20,6 +20,12 @@ enum TYPE {
 	UN_VAR  // variable that hasn't defined yet
 };
 
+enum STATUS {
+	NORMAL,
+	SUS_IN,
+	SUS_READ
+};
+
 typedef struct element {
 	int type;
 	int client_id;
@@ -91,8 +97,10 @@ void master () {
 
 		p = strtok(buf, " ");
 		client = atoi(p);       // parse client ID
-		if (suspend_id.at(client))
+		if (suspend_id.at(client)) {
+			omp_unset_lock(&simple_lock);
 			continue;
+		}
 		p = strtok(NULL, " ");
 		strcpy(act, p);         // parse action
 		p = strtok(NULL, " ");
@@ -203,14 +211,21 @@ void master () {
 						}
 						tuple_it++;
 					}
+					else {
+						match = false;
+						send2client.clear();
+						break;
+					}
 				}
 			}
 			if (match == false) {     // no previous request match
 				tuple_list.push_back(tuple);
 			}
 			else {	// match -> rescue from suspend
+				if (suspend_id.at(ret2client_id) == SUS_READ)
+					tuple_list.push_back(tuple);
 				client_vec.at(ret2client_id) = 1;
-				suspend_id.at(ret2client_id) = 0;
+				suspend_id.at(ret2client_id) = NORMAL;
 				tuple_list.erase(ret);
 				client_vec.at(0) = 0;
 			}
@@ -307,12 +322,20 @@ void master () {
 						tuple_it->type = VAR;
 						tuple_it++;
 					}
+					else {
+						match = false;
+						send2client.clear();
+						break;
+					}
 				}
 			}
 
 			if (match == false) {     // no previous request match -> suspend
 				wait_list.push_back(tuple);
-				suspend_id.at(client) = 1;
+				if (!strncmp(act, "in", 2))
+					suspend_id.at(client) = SUS_IN;
+				else
+					suspend_id.at(client) = SUS_READ;
 			}
 			else {  // match 
 				if (!strcmp(act, "in")) {
@@ -354,7 +377,7 @@ int main () {
 	cin >> numThread;
 	getchar();
 	client_vec.resize(numThread + 1, 0);
-	suspend_id.resize(numThread + 1, 0);
+	suspend_id.resize(numThread + 1, NORMAL);
 
 	omp_init_lock(&simple_lock);
 
